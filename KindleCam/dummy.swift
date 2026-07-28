@@ -8,3 +8,7 @@
 struct Name {
     var name: String
 }
+
+struct Dummy {
+    var text: String
+}
