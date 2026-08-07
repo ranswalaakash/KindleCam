@@ -59,7 +59,7 @@ private struct ShapeTile: View {
                 Image(assetName)
                     .resizable()
                     .scaledToFit()
-                    .padding(10)
+                    .padding(8)
             } else {
                 Image(systemName: shape.symbolName)
                     .font(.title2)

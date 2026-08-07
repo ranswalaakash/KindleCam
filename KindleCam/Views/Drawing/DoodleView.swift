@@ -9,6 +9,7 @@ import SwiftUI
 
 public struct DoodleView: View {
     @StateObject private var viewModel = DoodleViewModel()
+    @State private var showHintSheet = false
 
     public init() {}
 
@@ -16,13 +17,12 @@ public struct DoodleView: View {
         GeometryReader { proxy in
             let isLandscape = proxy.size.width > proxy.size.height
             let horizontalPadding: CGFloat = 16
-            let topAreaHeight: CGFloat = isLandscape ? 40 : 60
-            let bottomAreaHeight: CGFloat = isLandscape ? 0 : 210
-            let maxCanvasSide = min(
-                proxy.size.width - (horizontalPadding * 2) - (isLandscape ? 280 : 0),
-                proxy.size.height - topAreaHeight - bottomAreaHeight
-            )
-            let canvasSide = max(260, maxCanvasSide)
+            
+            // Calculate a generous canvas size that fills available screen space
+            let maxCanvasSide = isLandscape
+                ? min(proxy.size.width - 340, proxy.size.height - 100)
+                : min(proxy.size.width - (horizontalPadding * 2), proxy.size.height - 280)
+            let canvasSide = max(300, maxCanvasSide)
 
             ZStack {
                 // Background Gradient matching Creative Drawing theme
@@ -39,21 +39,59 @@ public struct DoodleView: View {
                 VStack(spacing: 12) {
                     // Header Subtitle Banner
                     if let shape = viewModel.selectedShape {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(red: 1.0, green: 0.35, blue: 0.35).opacity(0.15))
+                                    .frame(width: 38, height: 38)
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(Color(red: 1.0, green: 0.35, blue: 0.35))
+                            }
+                            
+                            HStack(spacing: 4) {
                                 Text("Turn the \(shape.title) into...")
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .font(.system(size: 18, weight: .black, design: .rounded))
                                     .foregroundStyle(Color(red: 0.7, green: 0.15, blue: 0.15))
-
-                                Text(shape.ideas)
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.secondary)
+                                
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color(red: 1.0, green: 0.6, blue: 0.2))
                             }
                             Spacer()
+
+                            // Interactive Hint Button
+                            Button(action: { showHintSheet = true }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "lightbulb.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text("Hints 💡")
+                                        .font(.system(size: 14, weight: .black, design: .rounded))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(red: 1.0, green: 0.35, blue: 0.35), Color(red: 1.0, green: 0.52, blue: 0.38)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .shadow(color: Color(red: 1.0, green: 0.35, blue: 0.35).opacity(0.3), radius: 6, x: 0, y: 3)
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
+                        )
                     }
 
                     if isLandscape {
@@ -114,6 +152,11 @@ public struct DoodleView: View {
         }
         .navigationTitle(viewModel.selectedShape != nil ? viewModel.selectedShape!.title : "Creative Canvas")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showHintSheet) {
+            if let shape = viewModel.selectedShape {
+                DrawingHintsView(shape: shape)
+            }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(action: { viewModel.undo() }) {
@@ -151,6 +194,29 @@ public struct DoodleView: View {
                 .buttonStyle(.plain)
             }
         }
+        .onAppear {
+            lockLandscape()
+        }
+        .onDisappear {
+            unlockOrientation()
+        }
+    }
+
+    private func lockLandscape() {
+        AppDelegate.orientationLock = .landscape
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { _ in }
+        }
+        UIDevice.current.setValue(UIInterfaceOrientation.landscapeRight.rawValue, forKey: "orientation")
+        UIViewController.attemptRotationToDeviceOrientation()
+    }
+
+    private func unlockOrientation() {
+        AppDelegate.orientationLock = .all
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .all)) { _ in }
+        }
+        UIViewController.attemptRotationToDeviceOrientation()
     }
 
     private var canvasContainer: some View {
@@ -355,11 +421,12 @@ private struct ReferenceShape: View {
                 Image(asset)
                     .resizable()
                     .scaledToFit()
+                    .opacity(0.30)
             } else {
                 Image(systemName: shape.symbolName)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.black.opacity(0.30))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

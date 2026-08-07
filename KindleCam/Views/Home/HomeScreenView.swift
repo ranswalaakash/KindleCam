@@ -118,13 +118,13 @@ public struct HomeScreenView: View {
     private func giantCameraStoryCard(isLandscape: Bool) -> some View {
         NavigationLink(destination: CameraStoryHomeView()) {
             GiantHomeCard(
-                title: "Camera Story",
-                subtitle: "Point camera at objects to create magical interactive stories!",
+                title: "Let's Capture",
+                subtitle: "Snap photos of real objects and discover what they're used for!",
                 iconName: "camera.fill",
-                badgeText: "WOW!",
+                badgeText: "CAPTURE!",
                 badgeColors: [KidColors.coralPink, KidColors.roseGold],
                 gradientColors: [KidColors.cosmicPurple, KidColors.cosmicPurpleEnd],
-                buttonText: "Start Story Adventure",
+                buttonText: "Start Capturing",
                 graphicType: .cameraLens,
                 isLandscape: isLandscape
             )

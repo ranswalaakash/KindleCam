@@ -90,16 +90,14 @@ public struct CameraCaptureView: View {
                 Spacer()
                 
                 // Processing Indicator Overlay
-                if viewModel.phase == .detectingObjects || viewModel.phase == .generatingStory {
+                if viewModel.phase == .detectingObjects {
                     VStack(spacing: 14) {
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(.white)
                             .scaleEffect(1.6)
                         
-                        Text(viewModel.phase == .detectingObjects
-                             ? "Looking at your picture... 🔍"
-                             : "Creating your story... ✨")
+                        Text("Discovering shapes & colors... 🔍")
                             .font(.system(size: 17, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                     }

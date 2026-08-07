@@ -9,8 +9,6 @@
 
 import Foundation
 
-/// DTO for Foundation Model structured story outputs.
-/// Contains the narrative text and an ordered list of interactive tasks.
 public struct GeneratedStoryContent: Codable, Sendable {
     public let title: String
     public let story: String
@@ -23,19 +21,12 @@ public struct GeneratedStoryContent: Codable, Sendable {
     }
 }
 
-/// DTO for Foundation Model structured task outputs.
-/// Each task carries the narrative prompt shown to the child, the interaction type,
-/// and task-specific payload data (e.g. quiz options, correct answer, tap target count).
 public struct GeneratedTaskContent: Codable, Sendable {
     public let title: String
     public let storySegment: String
     public let taskDescription: String
     public let taskType: TaskType
     public let difficulty: DifficultyLevel
-    /// Task-specific payload. Interpretation depends on taskType:
-    /// - quizQuestion: options (String array), correctAnswerIndex (Int)
-    /// - countObjects: correctCount (Int), objectLabel (String)
-    /// - tapObjects: targetCount (Int), objectLabel (String)
     public let payload: TaskPayload
     
     public init(
@@ -55,14 +46,11 @@ public struct GeneratedTaskContent: Codable, Sendable {
     }
 }
 
-/// Typed payload for task-specific data, keeping the AI output structured
-/// and preventing arbitrary/unvalidated data from reaching the UI.
 public enum TaskPayload: Codable, Sendable, Equatable {
     case quiz(options: [String], correctAnswerIndex: Int)
     case count(correctCount: Int, objectLabel: String)
     case tap(targetCount: Int, objectLabel: String)
     
-    // MARK: - Codable
     
     private enum CodingKeys: String, CodingKey {
         case type, options, correctAnswerIndex, correctCount, targetCount, objectLabel

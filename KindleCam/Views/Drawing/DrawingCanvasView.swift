@@ -45,6 +45,13 @@ public struct DrawingCanvasView: UIViewRepresentable {
         canvas.maximumZoomScale = 1
         canvas.bounces = false
         canvas.isScrollEnabled = false
+        
+        // Remove default UIScribbleInteraction to prevent handwritingd XPC daemon connection invalidation logs
+        let scribbleInteractions = canvas.interactions.compactMap { $0 as? UIScribbleInteraction }
+        for interaction in scribbleInteractions {
+            canvas.removeInteraction(interaction)
+        }
+        
         return canvas
     }
 
@@ -55,12 +62,16 @@ public struct DrawingCanvasView: UIViewRepresentable {
         }
         if context.coordinator.lastClear != clearTrigger {
             canvas.drawing = PKDrawing()
-            drawing = PKDrawing()
+            DispatchQueue.main.async {
+                self.drawing = PKDrawing()
+            }
             context.coordinator.lastClear = clearTrigger
         }
         if context.coordinator.lastUndo != undoTrigger {
             canvas.undoManager?.undo()
-            drawing = canvas.drawing
+            DispatchQueue.main.async {
+                self.drawing = canvas.drawing
+            }
             context.coordinator.lastUndo = undoTrigger
         }
         if context.coordinator.lastSave != saveTrigger {
@@ -129,13 +140,6 @@ public final class RotationSafeCanvasView: PKCanvasView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         guard bounds.size != previousSize, !bounds.isEmpty else { return }
-        if previousSize != .zero, !drawing.bounds.isEmpty {
-            let transform = CGAffineTransform(
-                translationX: (bounds.width - previousSize.width) / 2,
-                y: (bounds.height - previousSize.height) / 2
-            )
-            drawing = drawing.transformed(using: transform)
-        }
         previousSize = bounds.size
         contentSize = bounds.size
         contentOffset = .zero
