@@ -39,15 +39,77 @@ public final class VisionObjectDetector: Sendable {
                 return analyzeImageFallback(image: image)
             }
             
-            // Sort by confidence descending and filter out empty labels
+            // Sort observations by confidence
             let sortedObservations = observations.sorted(by: { $0.confidence > $1.confidence })
             
+            // 1. Scan top observations for primary object category overrides
+            var primaryCategoryLabel: String? = nil
+            for obs in sortedObservations.prefix(25) {
+                let id = obs.identifier.lowercased()
+                if id.contains("clock") || id.contains("timepiece") || id.contains("chronometer") || id.contains("alarm") {
+                    primaryCategoryLabel = "Clock"
+                    break
+                } else if id.contains("laptop") || id.contains("notebook computer") || id.contains("macbook") {
+                    primaryCategoryLabel = "Laptop"
+                    break
+                } else if id.contains("phone") || id.contains("cellular") || id.contains("mobile") || id.contains("telephone") || id.contains("smartphone") {
+                    primaryCategoryLabel = "Phone"
+                    break
+                } else if id.contains("book") || id.contains("textbook") || id.contains("journal") {
+                    primaryCategoryLabel = "Book"
+                    break
+                } else if id.contains("coffee mug") || id.contains("teacup") || id.contains("beverage container") {
+                    primaryCategoryLabel = "Cup"
+                    break
+                } else if id.contains("chair") || id.contains("armchair") || id.contains("rocking chair") {
+                    primaryCategoryLabel = "Chair"
+                    break
+                } else if id.contains("sneaker") || id.contains("running shoe") || id.contains("boot") {
+                    primaryCategoryLabel = "Shoe"
+                    break
+                } else if id.contains("guitar") || id.contains("ukulele") {
+                    primaryCategoryLabel = "Guitar"
+                    break
+                } else if id.contains("water bottle") || id.contains("wine bottle") {
+                    primaryCategoryLabel = "Bottle"
+                    break
+                } else if id.contains("basketball") || id.contains("soccer ball") || id.contains("tennis ball") {
+                    primaryCategoryLabel = "Ball"
+                    break
+                } else if id.contains("backpack") || id.contains("knapsack") {
+                    primaryCategoryLabel = "Backpack"
+                    break
+                }
+            }
+
+            // 2. Filter out generic broad terms & sub-component parts (e.g. dial, knob, wheel, handle)
             var detectedObjects: [CapturedObject] = []
             var seenLabels = Set<String>()
             
+            if let primary = primaryCategoryLabel {
+                seenLabels.insert(primary)
+                detectedObjects.append(
+                    CapturedObject(
+                        label: primary,
+                        confidence: 0.98,
+                        boundingBox: NormalizedRect(),
+                        timestamp: Date()
+                    )
+                )
+            }
+            
+            let genericFilterSet: Set<String> = [
+                "Machine", "Device", "Equipment", "Electronic Equipment", "Structure",
+                "Artifact", "Container", "Implement", "Furnishing", "Object", "Commodity",
+                "Instrumentality", "Medium", "Tool", "Apparatus", "Facility", "System", "Mechanism",
+                "Gadget", "Utensil", "Ware", "Goods", "Cool Object", "Item",
+                "Dial", "Face", "Knob", "Wheel", "Button", "Switch", "Handle", "Pedal", "Lever",
+                "Screen", "Display", "Cover", "Case", "Stand", "Holder", "Base", "Surface", "Edge", "Corner", "Part", "Piece"
+            ]
+            
             for obs in sortedObservations {
                 let label = self.friendlyLabel(obs.identifier)
-                if !label.isEmpty && !seenLabels.contains(label) {
+                if !label.isEmpty && !genericFilterSet.contains(label) && !seenLabels.contains(label) {
                     seenLabels.insert(label)
                     detectedObjects.append(
                         CapturedObject(
@@ -64,7 +126,7 @@ public final class VisionObjectDetector: Sendable {
             }
             
             if detectedObjects.isEmpty {
-                print("[VisionObjectDetector] Parsed labels empty, analyzing image features")
+                print("[VisionObjectDetector] Parsed labels empty after generic filter, analyzing image features fallback")
                 return analyzeImageFallback(image: image)
             }
             
@@ -103,19 +165,63 @@ public final class VisionObjectDetector: Sendable {
         }
     }
     
-    /// Converts Vision classifier identifiers (e.g. "n07734744, apple") to clean child-friendly labels.
+    /// Converts Vision classifier identifiers (e.g. "n03708304, machine, device, clock") to clean child-friendly labels.
     private func friendlyLabel(_ rawIdentifier: String) -> String {
+        let lower = rawIdentifier.lowercased()
+        
+        // Specific keyword overrides for common kids' objects
+        if lower.contains("clock") || lower.contains("timepiece") || lower.contains("chronometer") || lower.contains("analog") || lower.contains("digital clock") || lower.contains("wall clock") || lower.contains("alarm") {
+            return "Clock"
+        }
+        if lower.contains("laptop") || lower.contains("notebook computer") || lower.contains("macbook") {
+            return "Laptop"
+        }
+        if lower.contains("phone") || lower.contains("cellular") || lower.contains("mobile") || lower.contains("telephone") || lower.contains("smartphone") {
+            return "Phone"
+        }
+        if lower.contains("book") || lower.contains("textbook") || lower.contains("notebook") || lower.contains("journal") {
+            return "Book"
+        }
+        if lower.contains("cup") || lower.contains("mug") || lower.contains("coffee mug") || lower.contains("teacup") || lower.contains("glass") {
+            return "Cup"
+        }
+        if lower.contains("chair") || lower.contains("armchair") || lower.contains("seat") || lower.contains("throne") {
+            return "Chair"
+        }
+        if lower.contains("shoe") || lower.contains("sneaker") || lower.contains("boot") || lower.contains("footwear") {
+            return "Shoe"
+        }
+        if lower.contains("guitar") || lower.contains("ukulele") {
+            return "Guitar"
+        }
+        if lower.contains("bottle") || lower.contains("flask") {
+            return "Bottle"
+        }
+        if lower.contains("ball") || lower.contains("basketball") || lower.contains("soccer") || lower.contains("baseball") {
+            return "Ball"
+        }
+        if lower.contains("key") || lower.contains("keyring") {
+            return "Key"
+        }
+        if lower.contains("backpack") || lower.contains("knapsack") || lower.contains("bag") {
+            return "Backpack"
+        }
+
+        // Broad category terms to skip
+        let genericTerms: Set<String> = [
+            "machine", "device", "equipment", "electronic equipment", "structure",
+            "artifact", "container", "implement", "furnishing", "object", "commodity",
+            "instrumentality", "medium", "tool", "apparatus", "facility"
+        ]
+        
         // Strip Wordnet IDs if present (e.g. "n02123045, cat, domestic cat")
         let cleaned = rawIdentifier.replacingOccurrences(of: #"n\d{7,8},\s*"#, with: "", options: .regularExpression)
+        let parts = cleaned.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         
-        // Split by commas to get synonyms
-        let parts = cleaned.components(separatedBy: ",")
+        // Filter out generic broad terms and pick the most specific noun term
+        let specificParts = parts.filter { !genericTerms.contains($0.lowercased()) && !$0.isEmpty }
+        let candidate = specificParts.first(where: { $0.count > 2 }) ?? parts.last(where: { !$0.isEmpty }) ?? rawIdentifier
         
-        // Pick the last/most specific term or candidate
-        let candidate = parts.last?.trimmingCharacters(in: .whitespacesAndNewlines)
-            ?? parts.first?.trimmingCharacters(in: .whitespacesAndNewlines)
-            ?? rawIdentifier
-            
         // Clean underscores and capitalize words
         let words = candidate.replacingOccurrences(of: "_", with: " ")
             .split(separator: " ")

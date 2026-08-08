@@ -57,16 +57,21 @@ public final class EducationalShapeColorService: Sendable {
         guard model.isAvailable else { return nil }
         
         let prompt = """
-        You are an enthusiastic children's educator for ages 3-7.
-        Analyse this object: "\(objectLabel)".
+        You are a friendly teacher for children aged 3–7.
 
-        Respond in JSON with exact keys:
+        The object is: "\(objectLabel)"
+
+        Explain what the object is used for in simple, fun words. Also give one interesting fact about it.
+
+        Return only this JSON:
+
         {
-            "objectLabel": "\(objectLabel)",
-            "usageExplanation": "Oh wow! A \(objectLabel) is [explain in 2-3 enthusiastic, kid-friendly sentences what this object is used for and why it's cool!]",
-            "funFact": "[1 fun educational fact for kids about this object]"
+          "objectLabel": "\(objectLabel)",
+          "usageExplanation": "A short, fun explanation of what the object is used for.",
+          "funFact": "One simple and interesting fact about the object."
         }
-        Keep tone super excited ("Oh wow!", "Awesome!"), simple, and educational for young children.
+
+        Use easy words and an excited, kid-friendly tone.
         """
         
         do {
@@ -153,9 +158,10 @@ public final class EducationalShapeColorService: Sendable {
                 "Did you know? Guitars have 6 strings that vibrate back and forth to create sound waves in the air!"
             )
         } else {
+            let cleanName = label.capitalized
             return (
-                "Oh wow! A \(label.capitalized) is a super helpful object! Every object around us has its own special job to help us play, learn, and live happily every day!",
-                "Did you know? Exploring objects around your home is a great way to discover how things work!"
+                "Oh wow! A \(cleanName) is a super helpful item! It helps us in our daily lives so we can play, learn, and do fun activities every day!",
+                "Did you know? Everything in our world has its own unique story and job!"
             )
         }
     }

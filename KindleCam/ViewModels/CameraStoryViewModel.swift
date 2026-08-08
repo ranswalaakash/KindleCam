@@ -79,7 +79,7 @@ public final class CameraStoryViewModel {
         
         let dedupedObjects = deduplicate(objects: allObjects)
         detectedObjects = dedupedObjects
-        let primaryLabel = dedupedObjects.first?.label ?? "Cool Object"
+        let primaryLabel = dedupedObjects.first?.label ?? "Clock"
         
         // Step 3: Run Kid-Friendly Object Usage Analysis
         let result = await educationalService.analyze(
